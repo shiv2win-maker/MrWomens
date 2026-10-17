@@ -103,6 +103,14 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
     _tabController = TabController(length: 3, vsync: this);
   }
 
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _nameController.dispose();
+    _mobileController.dispose();
+    super.dispose();
+  }
+
   void _addToCart(ProductItem item) {
     setState(() {
       final existingIndex = _cart.indexWhere((c) => c.product.name == item.name && c.product.category == item.category);
@@ -123,14 +131,14 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
     });
   }
 
-  void _editItemPriceDialog(int cartIndex) {
-    final controller = TextEditingController(text: _cart[cartIndex].price.toStringAsFixed(0));
+  void _editPrice(int index) {
+    final textCtrl = TextEditingController(text: _cart[index].price.toStringAsFixed(0));
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Edit Price: ${_cart[cartIndex].product.name}'),
+        title: Text('Edit Price: ${_cart[index].product.name}'),
         content: TextField(
-          controller: controller,
+          controller: textCtrl,
           keyboardType: TextInputType.number,
           decoration: const InputDecoration(labelText: 'Price (₹)', prefixText: '₹'),
         ),
@@ -138,10 +146,12 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
-              final newPrice = double.tryParse(controller.text) ?? _cart[cartIndex].price;
-              setState(() {
-                _cart[cartIndex].price = newPrice;
-              });
+              final val = double.tryParse(textCtrl.text);
+              if (val != null) {
+                setState(() {
+                  _cart[index].price = val;
+                });
+              }
               Navigator.pop(ctx);
             },
             child: const Text('Save'),
@@ -298,7 +308,7 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (context, index) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final item = items[index];
         final priceController = TextEditingController(text: item.price.toStringAsFixed(0));
@@ -353,4 +363,101 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    
+                  ),
+                  child: const Text('+ Add', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final dateStr = DateFormat('dd-MM-yyyy').format(now);
+    final timeStr = DateFormat('hh:mm a').format(now);
+
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+                boxShadow: [
+                  BoxShadow(color: Colors.pink.withOpacity(0.08), blurRadius: 8, offset: const Offset(0, 3)),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('#$billNumber', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFFE91E63))),
+                      TextButton.icon(
+                        onPressed: _resetForNewBill,
+                        style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                        icon: const Icon(Icons.add_circle_outline, size: 16, color: Color(0xFFE91E63)),
+                        label: const Text('New Bill', style: TextStyle(color: Color(0xFFE91E63), fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                  Center(
+                    child: Image.asset(
+                      'logo.png',
+                      height: 52,
+                      errorBuilder: (ctx, err, stack) => Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.woman, color: Color(0xFFE91E63), size: 28),
+                          const SizedBox(width: 6),
+                          RichText(
+                            text: const TextSpan(
+                              children: [
+                                TextSpan(text: 'Mr.', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87)),
+                                TextSpan(text: 'Womens', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFE91E63))),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text('Tirupur Road - Kangayam', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.black54)),
+                  const SizedBox(height: 2),
+                  const Text('GSTIN: 33GHWPS6754J1ZA', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87)),
+                  const SizedBox(height: 2),
+                  const Text('Contact: +91 96006 70996', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFE91E63))),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _nameController,
+                          decoration: InputDecoration(
+                            isDense: true,
+                            hintText: 'Customer Name',
+                            prefixIcon: const Icon(Icons.person, size: 18),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(dateStr, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _mobileController,
+                          keyboardType: Te
