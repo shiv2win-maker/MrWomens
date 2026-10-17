@@ -294,163 +294,63 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
     await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => doc.save());
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final dateStr = DateFormat('dd-MM-yyyy').format(now);
-    final timeStr = DateFormat('hh:mm a').format(now);
+  Widget _buildProductGrid(List<ProductItem> items) {
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      itemCount: items.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        final item = items[index];
+        final priceController = TextEditingController(text: item.price.toStringAsFixed(0));
 
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header Section
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
-                boxShadow: [
-                  BoxShadow(color: Colors.pink.withOpacity(0.08), blurRadius: 8, offset: const Offset(0, 3)),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('#$billNumber', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFFE91E63))),
-                      TextButton.icon(
-                        onPressed: _resetForNewBill,
-                        style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-                        icon: const Icon(Icons.add_circle_outline, size: 16, color: Color(0xFFE91E63)),
-                        label: const Text('New Bill', style: TextStyle(color: Color(0xFFE91E63), fontWeight: FontWeight.bold)),
-                      ),
-                    ],
-                  ),
-                  // Original Logo display with asset fallback
-                  Center(
-                    child: Image.asset(
-                      'logo.png',
-                      height: 52,
-                      errorBuilder: (ctx, err, stack) => Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.woman, color: Color(0xFFE91E63), size: 28),
-                          const SizedBox(width: 6),
-                          RichText(
-                            text: const TextSpan(
-                              children: [
-                                TextSpan(text: 'Mr.', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87)),
-                                TextSpan(text: 'Womens', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFE91E63))),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+        return Card(
+          elevation: 0,
+          color: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.pink.shade50),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 14,
+                  backgroundColor: const Color(0xFFFFF0F5),
+                  child: Text('${index + 1}', style: const TextStyle(color: Color(0xFFE91E63), fontWeight: FontWeight.bold, fontSize: 12)),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                ),
+                Container(
+                  width: 75,
+                  height: 36,
+                  margin: const EdgeInsets.only(right: 8),
+                  child: TextField(
+                    controller: priceController,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFFE91E63)),
+                    decoration: InputDecoration(
+                      prefixText: '₹',
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     ),
+                    onChanged: (val) {
+                      final parsed = double.tryParse(val);
+                      if (parsed != null) {
+                        item.price = parsed;
+                      }
+                    },
                   ),
-                  const SizedBox(height: 4),
-                  const Text('Tirupur Road - Kangayam', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.black54)),
-                  const SizedBox(height: 2),
-                  const Text('GSTIN: 33GHWPS6754J1ZA', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87)),
-                  const SizedBox(height: 2),
-                  const Text('Contact: +91 96006 70996', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFE91E63))),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _nameController,
-                          decoration: InputDecoration(
-                            isDense: true,
-                            hintText: 'Customer Name',
-                            prefixIcon: const Icon(Icons.person, size: 18),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(dateStr, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _mobileController,
-                          keyboardType: TextInputType.phone,
-                          decoration: InputDecoration(
-                            isDense: true,
-                            hintText: 'Mobile Number',
-                            prefixIcon: const Icon(Icons.phone, size: 18),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(timeStr, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // Tabs Without GST % labels
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: TabBar(
-                controller: _tabController,
-                indicatorColor: const Color(0xFFE91E63),
-                labelColor: const Color(0xFFE91E63),
-                unselectedLabelColor: Colors.black54,
-                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                tabs: const [
-                  Tab(text: 'Anti Tanishq'),
-                  Tab(text: 'Hair Accessories'),
-                  Tab(text: 'Kids'),
-                ],
-              ),
-            ),
-
-            // Products list with editable price per item
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildProductGrid(antiTanishqItems),
-                  _buildProductGrid(hairAccessories),
-                  _buildProductGrid(kidsItems),
-                ],
-              ),
-            ),
-
-            // Cart Summary and Print/WhatsApp buttons
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, -3)),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (_cart.isNotEmpty)
-                    Container(
-                      constraints: const BoxConstraints(maxHeight: 70),
-                      child: ListView.builder(
-                        itemCount: _cart.length,
-                        itemBuilder: (context, i) {
-                          final item = _cart[i];
-                          return Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('${item.product.name} (x${item.quantit
+                ),
+                ElevatedButton(
+                  onPressed: () => _addToCart(item),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFF0F5),
+                    foregroundColor: const Color(0xFFE91E63),
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    
