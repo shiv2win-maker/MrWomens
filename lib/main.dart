@@ -5,459 +5,231 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
-void main() {
-  runApp(const MrWomensBillingApp());
-}
-
-class MrWomensBillingApp extends StatelessWidget {
-  const MrWomensBillingApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Mr. Womens Billing',
+void main() => runApp(const MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFE91E63),
-          primary: const Color(0xFFE91E63),
-        ),
-        scaffoldBackgroundColor: const Color(0xFFFFF0F5),
-        useMaterial3: true,
-      ),
-      home: const BillingScreen(),
-    );
-  }
-}
+      home: BillingApp(),
+    ));
 
-class ProductItem {
-  final String name;
-  final String category;
+class Item {
+  String name;
+  String cat;
   double price;
-  final double gstRate;
-
-  ProductItem({
-    required this.name,
-    required this.category,
-    required this.price,
-    required this.gstRate,
-  });
+  double gst;
+  Item(this.name, this.cat, this.price, this.gst);
 }
 
-class CartItem {
-  final ProductItem product;
-  int quantity;
+class CartRow {
+  Item item;
+  int qty;
   double price;
-
-  CartItem({
-    required this.product,
-    this.quantity = 1,
-    required this.price,
-  });
-
-  double get total => price * quantity;
+  CartRow(this.item, this.qty, this.price);
+  double get total => price * qty;
 }
 
-class BillingScreen extends StatefulWidget {
-  const BillingScreen({super.key});
-
+class BillingApp extends StatefulWidget {
+  const BillingApp({super.key});
   @override
-  State<BillingScreen> createState() => _BillingScreenState();
+  State<BillingApp> createState() => _BillingAppState();
 }
 
-class _BillingScreenState extends State<BillingScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _mobileController = TextEditingController();
-  int billNumber = 1042;
+class _BillingAppState extends State<BillingApp> with SingleTickerProviderStateMixin {
+  late TabController _tabs;
+  final _name = TextEditingController();
+  final _mob = TextEditingController();
+  int billNo = 1042;
+  final List<CartRow> cart = [];
 
-  final List<ProductItem> antiTanishqItems = [
-    ProductItem(name: 'Kada', category: 'Anti Tanishq', price: 1000, gstRate: 0.03),
-    ProductItem(name: 'Ring', category: 'Anti Tanishq', price: 250, gstRate: 0.03),
-    ProductItem(name: 'Bangles', category: 'Anti Tanishq', price: 600, gstRate: 0.03),
-    ProductItem(name: 'Chain', category: 'Anti Tanishq', price: 750, gstRate: 0.03),
-    ProductItem(name: 'Watch', category: 'Anti Tanishq', price: 1200, gstRate: 0.03),
-    ProductItem(name: 'Bracelet', category: 'Anti Tanishq', price: 350, gstRate: 0.03),
-    ProductItem(name: 'Anklet', category: 'Anti Tanishq', price: 500, gstRate: 0.03),
+  final List<Item> prods = [
+    Item('Kada', 'Anti Tanishq', 1000, 0.03),
+    Item('Ring', 'Anti Tanishq', 250, 0.03),
+    Item('Bangles', 'Anti Tanishq', 600, 0.03),
+    Item('Chain', 'Anti Tanishq', 750, 0.03),
+    Item('Watch', 'Anti Tanishq', 1200, 0.03),
+    Item('Bracelet', 'Anti Tanishq', 350, 0.03),
+    Item('Anklet', 'Anti Tanishq', 500, 0.03),
+    Item('Normal Clips', 'Hair Accessories', 50, 0.12),
+    Item('Premium Clips', 'Hair Accessories', 120, 0.12),
+    Item('Bands', 'Hair Accessories', 30, 0.12),
+    Item('Accessories', 'Hair Accessories', 80, 0.12),
+    Item('Kids Watch', 'Kids', 250, 0.18),
+    Item('Kids Bag', 'Kids', 450, 0.18),
+    Item('Keychains', 'Kids', 80, 0.18),
+    Item('Accessories', 'Kids', 150, 0.18),
   ];
-
-  final List<ProductItem> hairAccessories = [
-    ProductItem(name: 'Normal Clips', category: 'Hair Accessories', price: 50, gstRate: 0.12),
-    ProductItem(name: 'Premium Clips', category: 'Hair Accessories', price: 120, gstRate: 0.12),
-    ProductItem(name: 'Bands', category: 'Hair Accessories', price: 30, gstRate: 0.12),
-    ProductItem(name: 'Accessories', category: 'Hair Accessories', price: 80, gstRate: 0.12),
-  ];
-
-  final List<ProductItem> kidsItems = [
-    ProductItem(name: 'Kids Watch', category: 'Kids', price: 250, gstRate: 0.18),
-    ProductItem(name: 'Kids Bag', category: 'Kids', price: 450, gstRate: 0.18),
-    ProductItem(name: 'Keychains', category: 'Kids', price: 80, gstRate: 0.18),
-    ProductItem(name: 'Accessories', category: 'Kids', price: 150, gstRate: 0.18),
-  ];
-
-  final List<CartItem> _cart = [];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabs = TabController(length: 3, vsync: this);
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _nameController.dispose();
-    _mobileController.dispose();
-    super.dispose();
-  }
+  double get subTotal => cart.fold(0, (s, i) => s + i.total);
+  double get grandTotal => cart.fold(0, (s, i) => s + (i.total * (1 + i.item.gst)));
 
-  void _addToCart(ProductItem item) {
+  void add(Item it) {
     setState(() {
-      final existingIndex = _cart.indexWhere((c) => c.product.name == item.name && c.product.category == item.category);
-      if (existingIndex >= 0) {
-        _cart[existingIndex].quantity += 1;
+      int idx = cart.indexWhere((c) => c.item.name == it.name && c.item.cat == it.cat);
+      if (idx >= 0) {
+        cart[idx].qty++;
       } else {
-        _cart.add(CartItem(product: item, price: item.price, quantity: 1));
+        cart.add(CartRow(it, 1, it.price));
       }
     });
   }
 
-  void _updateQuantity(int index, int delta) {
+  void newBill() {
     setState(() {
-      _cart[index].quantity += delta;
-      if (_cart[index].quantity <= 0) {
-        _cart.removeAt(index);
-      }
+      billNo++;
+      cart.clear();
+      _name.clear();
+      _mob.clear();
     });
   }
 
-  void _editPrice(int index) {
-    final textCtrl = TextEditingController(text: _cart[index].price.toStringAsFixed(0));
+  void editPrice(int idx) {
+    var c = TextEditingController(text: cart[idx].price.toStringAsFixed(0));
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Edit Price: ${_cart[index].product.name}'),
-        content: TextField(
-          controller: textCtrl,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'Price (₹)', prefixText: '₹'),
-        ),
+        title: Text('Edit Price: ${cart[idx].item.name}'),
+        content: TextField(controller: c, keyboardType: TextInputType.number),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
-              final val = double.tryParse(textCtrl.text);
-              if (val != null) {
-                setState(() {
-                  _cart[index].price = val;
-                });
-              }
+              double? p = double.tryParse(c.text);
+              if (p != null) setState(() => cart[idx].price = p);
               Navigator.pop(ctx);
             },
             child: const Text('Save'),
-          ),
+          )
         ],
       ),
     );
   }
 
-  void _resetForNewBill() {
-    setState(() {
-      billNumber += 1;
-      _cart.clear();
-      _nameController.clear();
-      _mobileController.clear();
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Started New Bill #$billNumber')),
-    );
+  void sendWhatsApp() async {
+    String msg = "*MR. WOMENS - BILL #$billNo*\n";
+    msg += "Cust: ${_name.text.isEmpty ? 'Walk-in' : _name.text}\n";
+    for (var i in cart) {
+      msg += "${i.item.name} x${i.qty} = Rs.${i.total.toStringAsFixed(0)}\n";
+    }
+    msg += "*Total: Rs.${grandTotal.toStringAsFixed(2)}*\nThank you!";
+    String u = "https://wa.me/91${_mob.text.trim()}?text=${Uri.encodeComponent(msg)}";
+    await launchUrl(Uri.parse(u), mode: LaunchMode.externalApplication);
   }
 
-  double get subtotal => _cart.fold(0, (sum, item) => sum + item.total);
-
-  double get gstAntiTanishq => _cart
-      .where((item) => item.product.category == 'Anti Tanishq')
-      .fold(0, (sum, item) => sum + (item.total * 0.03));
-
-  double get gstHairAcc => _cart
-      .where((item) => item.product.category == 'Hair Accessories')
-      .fold(0, (sum, item) => sum + (item.total * 0.12));
-
-  double get gstKids => _cart
-      .where((item) => item.product.category == 'Kids')
-      .fold(0, (sum, item) => sum + (item.total * 0.18));
-
-  double get grandTotal => subtotal + gstAntiTanishq + gstHairAcc + gstKids;
-
-  void _shareViaWhatsApp() async {
-    final now = DateTime.now();
-    final dateStr = DateFormat('dd-MM-yyyy').format(now);
-    final timeStr = DateFormat('hh:mm a').format(now);
-
-    final buffer = StringBuffer();
-    buffer.writeln("*#$billNumber*");
-    buffer.writeln("================================");
-    buffer.writeln("*MR. WOMENS*");
-    buffer.writeln("Tirupur Road - Kangayam");
-    buffer.writeln("GSTIN: 33GHWPS6754J1ZA");
-    buffer.writeln("Contact: +91 96006 70996");
-    buffer.writeln("================================");
-    buffer.writeln("Customer: ${_nameController.text.isEmpty ? 'Customer' : _nameController.text}   $dateStr");
-    buffer.writeln("Mobile  : ${_mobileController.text.isEmpty ? '-' : _mobileController.text}   $timeStr");
-    buffer.writeln("--------------------------------");
-    buffer.writeln("*Items:*");
-    for (var item in _cart) {
-      buffer.writeln("${item.product.name} x ${item.quantity} = ₹${item.total.toStringAsFixed(2)}");
-    }
-    buffer.writeln("--------------------------------");
-    buffer.writeln("Subtotal: ₹${subtotal.toStringAsFixed(2)}");
-    if (gstAntiTanishq > 0) buffer.writeln("GST 3% (Anti Tanishq): ₹${gstAntiTanishq.toStringAsFixed(2)}");
-    if (gstHairAcc > 0) buffer.writeln("GST 12% (Hair Acc): ₹${gstHairAcc.toStringAsFixed(2)}");
-    if (gstKids > 0) buffer.writeln("GST 18% (Kids): ₹${gstKids.toStringAsFixed(2)}");
-    buffer.writeln("--------------------------------");
-    buffer.writeln("*GRAND TOTAL: ₹${grandTotal.toStringAsFixed(2)}*");
-    buffer.writeln("================================");
-    buffer.writeln("Thank you for shopping! Visit again!");
-
-    final encodedText = Uri.encodeComponent(buffer.toString());
-    final phone = _mobileController.text.trim().replaceAll(RegExp(r'\D'), '');
-
-    final whatsappUrl = phone.isNotEmpty
-        ? Uri.parse("whatsapp://send?phone=91$phone&text=$encodedText")
-        : Uri.parse("whatsapp://send?text=$encodedText");
-
-    final webFallback = phone.isNotEmpty
-        ? Uri.parse("https://api.whatsapp.com/send?phone=91$phone&text=$encodedText")
-        : Uri.parse("https://api.whatsapp.com/send?text=$encodedText");
-
-    try {
-      final launched = await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
-      if (!launched) {
-        await launchUrl(webFallback, mode: LaunchMode.externalApplication);
-      }
-    } catch (_) {
-      await launchUrl(webFallback, mode: LaunchMode.externalApplication);
-    }
-  }
-
-  Future<void> _printDirectToBluetooth() async {
-    final now = DateTime.now();
-    final dateStr = DateFormat('dd-MM-yyyy').format(now);
-    final timeStr = DateFormat('hh:mm a').format(now);
-
+  Future<void> printReceipt() async {
     final doc = pw.Document();
-    doc.addPage(
-      pw.Page(
-        pageFormat: const PdfPageFormat(58 * PdfPageFormat.mm, double.infinity, marginAll: 2 * PdfPageFormat.mm),
-        build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.center,
-            children: [
-              pw.Align(alignment: pw.Alignment.topLeft, child: pw.Text('#$billNumber', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold))),
-              pw.Text('MR. WOMENS', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
-              pw.Text('Tirupur Road - Kangayam', style: const pw.TextStyle(fontSize: 7)),
-              pw.Text('GSTIN: 33GHWPS6754J1ZA', style: const pw.TextStyle(fontSize: 7)),
-              pw.Text('Contact: +91 96006 70996', style: const pw.TextStyle(fontSize: 7)),
-              pw.Divider(thickness: 0.5),
-              pw.Row(
+    doc.addPage(pw.Page(
+      pageFormat: const PdfPageFormat(58 * PdfPageFormat.mm, double.infinity, marginAll: 2 * PdfPageFormat.mm),
+      build: (ctx) => pw.Column(
+        children: [
+          pw.Text('MR. WOMENS', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
+          pw.Text('Kangayam | Ph: 9600670996', style: const pw.TextStyle(fontSize: 7)),
+          pw.Text('Bill: #$billNo | ${_name.text}', style: const pw.TextStyle(fontSize: 7)),
+          pw.Divider(),
+          ...cart.map((e) => pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Cust: ${_nameController.text.isEmpty ? "Walk-in" : _nameController.text}', style: const pw.TextStyle(fontSize: 7)),
-                  pw.Text(dateStr, style: const pw.TextStyle(fontSize: 7)),
+                  pw.Text('${e.item.name} x${e.qty}', style: const pw.TextStyle(fontSize: 7)),
+                  pw.Text('Rs.${e.total.toStringAsFixed(0)}', style: const pw.TextStyle(fontSize: 7)),
                 ],
-              ),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text('Mob: ${_mobileController.text}', style: const pw.TextStyle(fontSize: 7)),
-                  pw.Text(timeStr, style: const pw.TextStyle(fontSize: 7)),
-                ],
-              ),
-              pw.Divider(thickness: 0.5),
-              ..._cart.map(
-                (item) => pw.Padding(
-                  padding: const pw.EdgeInsets.symmetric(vertical: 1),
-                  child: pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Expanded(child: pw.Text('${item.product.name} (x${item.quantity})', style: const pw.TextStyle(fontSize: 7))),
-                      pw.Text('₹${item.total.toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 7)),
-                    ],
-                  ),
-                ),
-              ),
-              pw.Divider(thickness: 0.5),
-              pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [pw.Text('Sub Total:', style: const pw.TextStyle(fontSize: 7)), pw.Text('₹${subtotal.toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 7))]),
-              if (gstAntiTanishq > 0) pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [pw.Text('GST 3%:', style: const pw.TextStyle(fontSize: 6)), pw.Text('₹${gstAntiTanishq.toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 6))]),
-              if (gstHairAcc > 0) pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [pw.Text('GST 12%:', style: const pw.TextStyle(fontSize: 6)), pw.Text('₹${gstHairAcc.toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 6))]),
-              if (gstKids > 0) pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [pw.Text('GST 18%:', style: const pw.TextStyle(fontSize: 6)), pw.Text('₹${gstKids.toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 6))]),
-              pw.SizedBox(height: 2),
-              pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [pw.Text('GRAND TOTAL:', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)), pw.Text('₹${grandTotal.toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold))]),
-              pw.Divider(thickness: 0.5),
-              pw.Text('Thank you! Visit again!', style: const pw.TextStyle(fontSize: 6)),
-            ],
-          );
-        },
+              )),
+          pw.Divider(),
+          pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
+            pw.Text('Total:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8)),
+            pw.Text('Rs.${grandTotal.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8)),
+          ]),
+        ],
       ),
-    );
-
-    await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => doc.save());
-  }
-
-  Widget _buildProductGrid(List<ProductItem> items) {
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      itemCount: items.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
-        final item = items[index];
-        final priceController = TextEditingController(text: item.price.toStringAsFixed(0));
-
-        return Card(
-          elevation: 0,
-          color: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.pink.shade50),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 14,
-                  backgroundColor: const Color(0xFFFFF0F5),
-                  child: Text('${index + 1}', style: const TextStyle(color: Color(0xFFE91E63), fontWeight: FontWeight.bold, fontSize: 12)),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                ),
-                Container(
-                  width: 75,
-                  height: 36,
-                  margin: const EdgeInsets.only(right: 8),
-                  child: TextField(
-                    controller: priceController,
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFFE91E63)),
-                    decoration: InputDecoration(
-                      prefixText: '₹',
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    onChanged: (val) {
-                      final parsed = double.tryParse(val);
-                      if (parsed != null) {
-                        item.price = parsed;
-                      }
-                    },
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () => _addToCart(item),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFF0F5),
-                    foregroundColor: const Color(0xFFE91E63),
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const Text('+ Add', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+    ));
+    await Printing.layoutPdf(onLayout: (fmt) async => doc.save());
   }
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final dateStr = DateFormat('dd-MM-yyyy').format(now);
-    final timeStr = DateFormat('hh:mm a').format(now);
-
     return Scaffold(
+      backgroundColor: const Color(0xFFFFF0F5),
       body: SafeArea(
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
-                boxShadow: [
-                  BoxShadow(color: Colors.pink.withOpacity(0.08), blurRadius: 8, offset: const Offset(0, 3)),
+              padding: const EdgeInsets.all(10),
+              color: Colors.white,
+              child: Column(
+                children: [
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                    Text('#$billNo', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.pink, fontSize: 16)),
+                    TextButton(onPressed: newBill, child: const Text('+ New Bill')),
+                  ]),
+                  Image.asset('logo.png', height: 45, errorBuilder: (c, e, s) => const Text('MR. WOMENS', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.pink))),
+                  const Text('Tirupur Road - Kangayam | Ph: 96006 70996', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  const SizedBox(height: 6),
+                  Row(children: [
+                    Expanded(child: TextField(controller: _name, decoration: const InputDecoration(hintText: 'Customer Name', isDense: true))),
+                    const SizedBox(width: 8),
+                    Expanded(child: TextField(controller: _mob, keyboardType: TextInputType.phone, decoration: const InputDecoration(hintText: 'Mobile', isDense: true))),
+                  ]),
                 ],
               ),
+            ),
+            TabBar(controller: _tabs, indicatorColor: Colors.pink, labelColor: Colors.pink, tabs: const [
+              Tab(text: 'Anti Tanishq'),
+              Tab(text: 'Hair Accessories'),
+              Tab(text: 'Kids'),
+            ]),
+            Expanded(
+              child: TabBarView(controller: _tabs, children: [
+                _buildList('Anti Tanishq'),
+                _buildList('Hair Accessories'),
+                _buildList('Kids'),
+              ]),
+            ),
+            Container(
+              padding: const EdgeInsets.all(10),
+              color: Colors.white,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('#$billNumber', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFFE91E63))),
-                      TextButton.icon(
-                        onPressed: _resetForNewBill,
-                        style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-                        icon: const Icon(Icons.add_circle_outline, size: 16, color: Color(0xFFE91E63)),
-                        label: const Text('New Bill', style: TextStyle(color: Color(0xFFE91E63), fontWeight: FontWeight.bold)),
-                      ),
-                    ],
-                  ),
-                  Center(
-                    child: Image.asset(
-                      'logo.png',
-                      height: 52,
-                      errorBuilder: (ctx, err, stack) => Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                  ...cart.map((c) => Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Icon(Icons.woman, color: Color(0xFFE91E63), size: 28),
-                          const SizedBox(width: 6),
-                          RichText(
-                            text: const TextSpan(
-                              children: [
-                                TextSpan(text: 'Mr.', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87)),
-                                TextSpan(text: 'Womens', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFE91E63))),
-                              ],
-                            ),
-                          ),
+                          Text('${c.item.name} x${c.qty}'),
+                          InkWell(
+                            onTap: () => editPrice(cart.indexOf(c)),
+                            child: Text('Rs.${c.total.toStringAsFixed(0)} (Edit)', style: const TextStyle(color: Colors.pink, fontWeight: FontWeight.bold)),
+                          )
                         ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text('Tirupur Road - Kangayam', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.black54)),
-                  const SizedBox(height: 2),
-                  const Text('GSTIN: 33GHWPS6754J1ZA', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87)),
-                  const SizedBox(height: 2),
-                  const Text('Contact: +91 96006 70996', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFE91E63))),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _nameController,
-                          decoration: InputDecoration(
-                            isDense: true,
-                            hintText: 'Customer Name',
-                            prefixIcon: const Icon(Icons.person, size: 18),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(dateStr, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                    ],
-                  ),
+                      )),
+                  const Divider(),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                    const Text('Total:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text('Rs.${grandTotal.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.pink)),
+                  ]),
                   const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _mobileController,
-                          keyboardType: Te
+                  Row(children: [
+                    Expanded(child: ElevatedButton(onPressed: cart.isEmpty ? null : printReceipt, child: const Text('Print'))),
+                    const SizedBox(width: 8),
+                    Expanded(child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white), onPressed: cart.isEmpty ? null : sendWhatsApp, child: const Text('WhatsApp'))),
+                  ])
+                ],
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildList(String cat) {
+    var items = prods.where((i) => i.cat == cat).toList();
+    return ListView.builder(
+      itemCount: items.length,
+      itemBuilder: (ctx, idx) => ListTile(
+        title: Text(items[idx].name),
+        subtitle: Text('Rs.${items[idx].price.toStringAsFixed(0)}'),
+        trailing: ElevatedButton(onPressed: () => add(items[idx]), child: const Text('+ Add')),
+      ),
+    );
+  }
+}
