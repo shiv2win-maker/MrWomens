@@ -127,7 +127,7 @@ class _BillingAppState extends State<BillingApp> with SingleTickerProviderStateM
         children: [
           pw.Text('MR. WOMENS', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
           pw.Text('Kangayam | Ph: 9600670996', style: const pw.TextStyle(fontSize: 7)),
-          pw.Text('Bill: #$billNo | ${_name.text}', style: const pw.TextStyle(fontSize: 7)),
+          pw.Text('Bill: #$billNo \vert{}${_name.text}', style: const pw.TextStyle(fontSize: 7)),
           pw.Divider(),
           ...cart.map((e) => pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -148,88 +148,5 @@ class _BillingAppState extends State<BillingApp> with SingleTickerProviderStateM
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFF0F5),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              color: Colors.white,
-              child: Column(
-                children: [
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                    Text('#$billNo', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.pink, fontSize: 16)),
-                    TextButton(onPressed: newBill, child: const Text('+ New Bill')),
-                  ]),
-                  Image.asset('logo.png', height: 45, errorBuilder: (c, e, s) => const Text('MR. WOMENS', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.pink))),
-                  const Text('Tirupur Road - Kangayam | Ph: 96006 70996', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                  const SizedBox(height: 6),
-                  Row(children: [
-                    Expanded(child: TextField(controller: _name, decoration: const InputDecoration(hintText: 'Customer Name', isDense: true))),
-                    const SizedBox(width: 8),
-                    Expanded(child: TextField(controller: _mob, keyboardType: TextInputType.phone, decoration: const InputDecoration(hintText: 'Mobile', isDense: true))),
-                  ]),
-                ],
-              ),
-            ),
-            TabBar(controller: _tabs, indicatorColor: Colors.pink, labelColor: Colors.pink, tabs: const [
-              Tab(text: 'Anti Tanishq'),
-              Tab(text: 'Hair Accessories'),
-              Tab(text: 'Kids'),
-            ]),
-            Expanded(
-              child: TabBarView(controller: _tabs, children: [
-                _buildList('Anti Tanishq'),
-                _buildList('Hair Accessories'),
-                _buildList('Kids'),
-              ]),
-            ),
-            Container(
-              padding: const EdgeInsets.all(10),
-              color: Colors.white,
-              child: Column(
-                children: [
-                  ...cart.map((c) => Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('${c.item.name} x${c.qty}'),
-                          InkWell(
-                            onTap: () => editPrice(cart.indexOf(c)),
-                            child: Text('Rs.${c.total.toStringAsFixed(0)} (Edit)', style: const TextStyle(color: Colors.pink, fontWeight: FontWeight.bold)),
-                          )
-                        ],
-                      )),
-                  const Divider(),
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                    const Text('Total:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    Text('Rs.${grandTotal.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.pink)),
-                  ]),
-                  const SizedBox(height: 6),
-                  Row(children: [
-                    Expanded(child: ElevatedButton(onPressed: cart.isEmpty ? null : printReceipt, child: const Text('Print'))),
-                    const SizedBox(width: 8),
-                    Expanded(child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white), onPressed: cart.isEmpty ? null : sendWhatsApp, child: const Text('WhatsApp'))),
-                  ])
-                ],
-              ),
-            )
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildList(String cat) {
-    var items = prods.where((i) => i.cat == cat).toList();
-    return ListView.builder(
-      itemCount: items.length,
-      itemBuilder: (ctx, idx) => ListTile(
-        title: Text(items[idx].name),
-        subtitle: Text('Rs.${items[idx].price.toStringAsFixed(0)}'),
-        trailing: ElevatedButton(onPressed: () => add(items[idx]), child: const Text('+ Add')),
-      ),
-    );
-  }
-}
+  Widget build(BuildContext context
+               
